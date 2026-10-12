@@ -81,11 +81,6 @@
             <i class="ph ph-list text-2xl"></i>
         </button>
         <h2 class="text-lg font-bold text-gray-800" id="current-view-title">Dashboard</h2>
-        
-        <!-- THE NEW SET API KEY BUTTON -->
-        <button onclick="changeApiKey()" class="ml-4 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg transition-colors shadow-sm">
-            <i class="ph ph-key text-base"></i> Set API Key
-        </button>
     </div>
             
             <div id="timer-container" class="hidden flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-full shadow-md border border-slate-700 transition-all">
@@ -211,6 +206,17 @@
 
         let app, db, auth;
 
+        window.getGeminiApiKey = function() {
+            let key = localStorage.getItem('gemini_api_key');
+            if (!key) {
+            key = prompt("Enter your Gemini API Key to enable AI tests:\n(Stored safely only on your device)");
+            if (key && key.trim()) {
+                key = key.trim();
+                localStorage.setItem('gemini_api_key', key);
+            }
+        }
+        return key;
+    };
         async function initializeAppEngine() {
             try {
                 app = initializeApp(firebaseConfig);
