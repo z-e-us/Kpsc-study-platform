@@ -466,8 +466,14 @@
                 }
             };
 
-            const apiKey = "AQ.Ab8RN6LCC8WbHhfNYVWYcFGVFni6FIIjijVTQDLX6fSrBkCcRA"; // Canvas handles this natively
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+            const apiKey = window.getGeminiApiKey();
+            if (!apiKey) {
+                showToast("API Key is required to generate tests.", "error");
+                state.view = 'dashboard';
+                updateUI();
+                return;
+            }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -594,8 +600,9 @@
             Write a concise 2-paragraph specific feedback report. Para 1: Overall exam readiness for this topic. Para 2: Specific formulas/concepts to revise based on their mistakes. Format with simple HTML (<p>, <b>).`;
 
             try {
-                const apiKey = "AQ.Ab8RN6IWhsIAQf52FbgbbDTlOHdbED8ihWsSFHotozxIllM0Xw";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+                const apiKey = window.getGeminiApiKey();
+                if (!apiKey) throw new Error("No API Key provided");
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                 const result = await response.json();
                 state.aiAnalysis = result.candidates[0].content.parts[0].text.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '').trim();
