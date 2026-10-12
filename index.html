@@ -574,7 +574,7 @@
             Write a concise 2-paragraph specific feedback report. Para 1: Overall exam readiness for this topic. Para 2: Specific formulas/concepts to revise based on their mistakes. Format with simple HTML (<p>, <b>).`;
 
             try {
-                const apiKey = "";
+                const apiKey = "AQ.Ab8RN6IWhsIAQf52FbgbbDTlOHdbED8ihWsSFHotozxIllM0Xw";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                 const result = await response.json();
