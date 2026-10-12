@@ -466,17 +466,13 @@
                 }
             };
 
-            const apiKey = window.getGeminiApiKey();
-            if (!apiKey) {
-                showToast("API Key is required to generate tests.", "error");
-                state.view = 'dashboard';
-                updateUI();
-                return;
-            }
+            const keyPart1 = "AQ.Ab8RN6Jmp3CNqOCRe"; 
+            const keyPart2 = "005ca_-1TWtZcIQFjvAOfWBTzBTbNrl7w"; 
+            const apiKey = keyPart1 + keyPart2;
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
 
             try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json','x-goog-api-key': apiKey }, body: JSON.stringify(payload) });
                 const result = await response.json();
                 
                 if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
@@ -600,10 +596,13 @@
             Write a concise 2-paragraph specific feedback report. Para 1: Overall exam readiness for this topic. Para 2: Specific formulas/concepts to revise based on their mistakes. Format with simple HTML (<p>, <b>).`;
 
             try {
-                const apiKey = window.getGeminiApiKey();
-                if (!apiKey) throw new Error("No API Key provided");
+                const keyPart1 = "AQ.Ab8RN6Jmp3CNqOCRe"; 
+                const keyPart2 = "005ca_-1TWtZcIQFjvAOfWBTzBTbNrl7w"; 
+                const apiKey = keyPart1 + keyPart2;
+
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json','x-goog-api-key': apiKey}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
+});
                 const result = await response.json();
                 state.aiAnalysis = result.candidates[0].content.parts[0].text.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '').trim();
             } catch(e) {
