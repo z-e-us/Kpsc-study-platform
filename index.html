@@ -76,12 +76,17 @@
 
     <main class="flex-1 flex flex-col h-full bg-slate-50 relative overflow-hidden">
         <header class="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0 shadow-sm z-10">
-            <div class="flex items-center gap-3">
-                <button class="md:hidden text-gray-500 hover:text-primary-600 transition-colors p-2 -ml-2" onclick="toggleSidebar()">
-                    <i class="ph ph-list text-2xl"></i>
-                </button>
-                <h2 class="text-lg font-bold text-gray-800" id="current-view-title">Dashboard</h2>
-            </div>
+    <div class="flex items-center gap-3">
+        <button class="md:hidden text-gray-500 hover:text-primary-600 transition-colors p-2 -ml-2" onclick="toggleSidebar()">
+            <i class="ph ph-list text-2xl"></i>
+        </button>
+        <h2 class="text-lg font-bold text-gray-800" id="current-view-title">Dashboard</h2>
+        
+        <!-- THE NEW SET API KEY BUTTON -->
+        <button onclick="changeApiKey()" class="ml-4 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg transition-colors shadow-sm">
+            <i class="ph ph-key text-base"></i> Set API Key
+        </button>
+    </div>
             
             <div id="timer-container" class="hidden flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-full shadow-md border border-slate-700 transition-all">
                 <i class="ph ph-timer text-lg"></i>
@@ -453,7 +458,7 @@
                 }
             };
 
-            const apiKey = "AQ.Ab8RN6IWhsIAQf52FbgbbDTlOHdbED8ihWsSFHotozxIllM0Xw"; // Canvas handles this natively
+            const apiKey = "AQ.Ab8RN6LCC8WbHhfNYVWYcFGVFni6FIIjijVTQDLX6fSrBkCcRA"; // Canvas handles this natively
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
 
             try {
