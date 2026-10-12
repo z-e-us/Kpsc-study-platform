@@ -1,724 +1,709 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>26-Week PSC/AE EEE Exam Master Planner</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        primary: { 50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac', 400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d' }
-                    }
-                }
-            }
-        }
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kerala PSC AE & Sub Engineer Prep Platform</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Firebase Modular SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #16a34a;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    // --- PASTE YOUR FIREBASE CONFIG HERE ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyYOUR_FIREBASE_PUBLIC_KEY",
+      authDomain: "your-project-id.firebaseapp.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project-id.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef123456"
+    };
 
-        .pulse-red { animation: pulseRed 1s infinite; }
-        @keyframes pulseRed { 0% { color: #ef4444; } 50% { color: #991b1b; transform: scale(1.05); } 100% { color: #ef4444; } }
-        
-        .accordion-content { transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
-        .accordion-content.open { max-height: 1200px; opacity: 1; }
-    </style>
+    let app, auth, db;
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      window.firebaseAuth = auth;
+      window.firebaseDb = db;
+      window.firebaseSignOut = signOut;
+      window.firebaseAddDoc = addDoc;
+      window.firebaseCollection = collection;
+      window.firebaseQuery = query;
+      window.firebaseWhere = where;
+      window.firebaseGetDocs = getDocs;
+      window.firebaseOrderBy = orderBy;
+      window.firebaseTimestamp = serverTimestamp;
+
+      // Automatically sign in anonymously if not logged in
+      signInAnonymously(auth).catch((err) => {
+        console.warn("Firebase Auth fallback: Proceeding in local storage mode.", err.message);
+      });
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          window.currentUserId = user.uid;
+          const statusElem = document.getElementById("auth-status");
+          if (statusElem) statusElem.textContent = `User: ${user.uid.slice(0, 6)}...`;
+          loadSavedHistory();
+        }
+      });
+    } catch (e) {
+      console.warn("Firebase initialization skipped or misconfigured. Falling back to local offline mode.", e);
+    }
+  </script>
 </head>
-<body class="bg-gray-50 text-gray-800 h-screen flex overflow-hidden font-sans antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
 
-    <aside class="w-80 bg-white border-r border-gray-200 flex flex-col h-full z-30 shadow-sm hidden md:flex shrink-0 transition-all duration-300 relative" id="sidebar">
-        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white shadow-md">
-                    <i class="ph ph-exam text-2xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-base font-bold text-gray-900 leading-tight">PSC AE Prep Pro</h1>
-                    <p class="text-xs text-gray-500 font-medium">26-Week Master Plan</p>
-                </div>
-            </div>
-            <button class="md:hidden text-gray-500 p-1" onclick="toggleSidebar()"><i class="ph ph-x text-xl"></i></button>
-        </div>
+  <!-- TOP NAVIGATION BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="bg-amber-500/10 text-amber-400 p-2 rounded-lg border border-amber-500/20">
+        <i class="ph ph-lightning text-2xl"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white">Kerala PSC Engineering Hub</h1>
+        <p class="text-xs text-slate-400">AE &bull; Sub Engineer &bull; Workshop Inspector</p>
+      </div>
+    </div>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-2" id="week-list">
-            <!-- Dynamically populated weeks and days -->
-        </div>
+    <div class="flex items-center gap-3">
+      <span id="auth-status" class="text-xs bg-slate-800 border border-slate-700 px-2.5 py-1 rounded text-slate-300">
+        Guest Session
+      </span>
+      <button onclick="changeApiKey()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition">
+        <i class="ph ph-key"></i> Update API Key
+      </button>
+    </div>
+  </header>
 
-        <div class="p-4 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 flex items-center justify-between" id="user-info-display">
-            <span>Authenticating...</span>
-            <div class="w-2 h-2 rounded-full bg-gray-400" id="auth-status-dot"></div>
-        </div>
+  <div class="flex-1 flex overflow-hidden">
+    <!-- LEFT SIDEBAR: 26-WEEK ROADMAP -->
+    <aside class="w-80 border-r border-slate-800 bg-slate-900/50 flex flex-col h-[calc(100vh-65px)]">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Study Roadmap (26 Wk)</span>
+        <span class="text-xs bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20">180 Days</span>
+      </div>
+      <div id="syllabus-container" class="flex-1 overflow-y-auto p-3 space-y-2">
+        <!-- Dynamically rendered week cards -->
+      </div>
     </aside>
 
-    <main class="flex-1 flex flex-col h-full bg-slate-50 relative overflow-hidden">
-        <header class="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0 shadow-sm z-10">
-            <div class="flex items-center gap-3">
-                <button class="md:hidden text-gray-500 hover:text-primary-600 transition-colors p-2 -ml-2" onclick="toggleSidebar()">
-                    <i class="ph ph-list text-2xl"></i>
-                </button>
-                <h2 class="text-lg font-bold text-gray-800" id="current-view-title">Dashboard</h2>
-            </div>
-            
-            <div id="timer-container" class="hidden flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-full shadow-md border border-slate-700 transition-all">
-                <i class="ph ph-timer text-lg"></i>
-                <span id="timer-display" class="font-mono font-bold text-lg tracking-wider">00:00</span>
-            </div>
-        </header>
+    <!-- MAIN DASHBOARD & TEST VIEW -->
+    <main class="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-950">
+      <div class="max-w-4xl mx-auto space-y-6">
 
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 relative" id="main-content">
-            <div class="h-full flex flex-col items-center justify-center">
-                <div class="loader mb-4"></div>
-                <p class="text-gray-500 font-medium">Connecting to Cloud Storage...</p>
+        <!-- WELCOME CARD / ACTIVE SELECTION BANNER -->
+        <div id="topic-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span id="active-tag" class="text-xs font-semibold px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Week 1 &bull; Day 1
+              </span>
+              <h2 id="active-topic-title" class="text-2xl font-bold mt-2 text-white">1.1_Charge, Current & Voltage</h2>
+              <p id="active-subtopic-desc" class="text-sm text-slate-400 mt-1">Module I: Fundamentals of Electricity &bull; Basic Electrical Concepts</p>
             </div>
+            <button onclick="startTestGeneration()" id="start-test-btn" class="flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg shadow-lg shadow-amber-500/10 transition">
+              <i class="ph ph-play-circle text-xl"></i> Launch Practice Test
+            </button>
+          </div>
         </div>
-        
-        <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+        <!-- TEST INTERFACE (HIDDEN BY DEFAULT) -->
+        <div id="test-view" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6 shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Exam Simulation</span>
+              <h3 id="test-view-title" class="text-lg font-bold text-white">Topic Practice Test</h3>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-lg border border-slate-800 text-amber-400 font-mono text-lg font-bold">
+              <i class="ph ph-timer"></i>
+              <span id="timer-display">15:00</span>
+            </div>
+          </div>
+
+          <div id="questions-list" class="space-y-6">
+            <!-- Questions dynamically injected here -->
+          </div>
+
+          <div class="flex justify-end pt-4 border-t border-slate-800">
+            <button onclick="submitExam(false)" class="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition flex items-center gap-2">
+              <i class="ph ph-check-circle text-lg"></i> Submit Test
+            </button>
+          </div>
+        </div>
+
+        <!-- RESULT & PERFORMANCE ANALYSIS VIEW (HIDDEN BY DEFAULT) -->
+        <div id="result-view" class="hidden space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <span class="text-xs font-semibold uppercase text-slate-400">Performance Summary</span>
+              <h3 class="text-2xl font-bold text-white mt-1">Test Completed</h3>
+              <p id="score-summary-text" class="text-sm text-slate-400 mt-1">You answered 0 out of 0 questions correctly.</p>
+            </div>
+            <div class="text-center bg-slate-950 px-6 py-4 rounded-xl border border-slate-800">
+              <div id="score-badge" class="text-4xl font-extrabold text-amber-400 font-mono">0%</div>
+              <span class="text-xs text-slate-400 font-medium">Final Score</span>
+            </div>
+          </div>
+
+          <!-- AI INSIGHTS CARD -->
+          <div class="bg-indigo-950/20 border border-indigo-500/30 rounded-xl p-6 space-y-3">
+            <div class="flex items-center gap-2 text-indigo-400 font-bold">
+              <i class="ph ph-sparkle text-xl"></i>
+              <span>AI Remedial Performance Breakdown</span>
+            </div>
+            <div id="ai-feedback-container" class="text-sm text-slate-300 leading-relaxed space-y-2">
+              <div class="flex items-center gap-2 text-slate-400">
+                <i class="ph ph-spinner-gap animate-spin"></i> Analyzing your answers...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORICAL ATTEMPTS LIST -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <i class="ph ph-clock-counter-clockwise text-base"></i> Recent Test Attempts
+            </h3>
+            <span class="text-xs text-slate-400" id="attempt-count">0 recorded</span>
+          </div>
+          <div id="history-container" class="space-y-3 text-sm text-slate-400">
+            No test records found yet. Complete a test above to record your score!
+          </div>
+        </div>
+
+      </div>
     </main>
+  </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <script>
+    // --- EXACT 14-WEEK SYLLABUS MAPPING ---
+    const SYLLABUS_ROADMAP = [
+      {
+        week: 1,
+        title: "Fundamentals of Electricity (Part 1)",
+        days: [
+          { day: "Mon", title: "1.1_Charge, Current & Voltage" },
+          { day: "Tue", title: "1.2_EMF, Work, Power & Energy" },
+          { day: "Wed", title: "1.3_Resistance & Ohms Law Part-1" },
+          { day: "Thu", title: "1.4_Resistance Part-2 & 1.5_Series Combination" },
+          { day: "Fri", title: "1.6_Parallel Combination & 1.7_KCL & Bulbs Analysis" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: L1_Fundamentals of Electricity Class Test 1-3" }
+        ]
+      },
+      {
+        week: 2,
+        title: "Network Analysis & Energy Sources",
+        days: [
+          { day: "Mon", title: "1.11_Equivalent Resistance Problems & Discussion" },
+          { day: "Tue", title: "1.13_Voltage and Current Source Basics" },
+          { day: "Wed", title: "1.14_Source Types & 1.15_Source Transformation Techniques" },
+          { day: "Thu", title: "1.16_Inductor & Electromagnetism Basics" },
+          { day: "Fri", title: "1.17_Capacitor Basics & 2.1_Nodal Analysis + Problems" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: L1_Fundamentals of Electricity Class Test 4-8" }
+        ]
+      },
+      {
+        week: 3,
+        title: "Electrostatics & Magnetism",
+        days: [
+          { day: "Mon", title: "2.2_Mesh Analysis, 1.1_Magnetism Terms, BH Curve" },
+          { day: "Tue", title: "1.4_Electromagnetic Induction & 1.5_Self Inductance" },
+          { day: "Wed", title: "1.6_Flux Linkage, Mutual Inductance & Coupled Coils" },
+          { day: "Thu", title: "2.1_Magnetic Material Classification & Solenoid/Toroid Field" },
+          { day: "Fri", title: "4.1_Electrostatics, 4.2_Capacitors, 4.3_Lightning Phenomenon" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: L1_Magnetic Circuits Class Test 1-5" }
+        ]
+      },
+      {
+        week: 4,
+        title: "AC Systems & Electrical Measurements (Part 1)",
+        days: [
+          { day: "Mon", title: "1.1_Impedance, Admittance, Reactance, Susceptance" },
+          { day: "Tue", title: "1.2_Sinusoidal Representation, Average & RMS Values" },
+          { day: "Wed", title: "1.4_AC through R, L, C, RLC & 1.5_Power in AC Circuits" },
+          { day: "Thu", title: "1.6_Resonance Circuit & 1.7_Three Phase Systems" },
+          { day: "Fri", title: "1.1_Instrument Torques & 1.4_PMMC & Dynamometer Extension" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: AC Systems & Magnetic Circuits (Test 1-3)" }
+        ]
+      },
+      {
+        week: 5,
+        title: "Electrical Measurements (Part 2)",
+        days: [
+          { day: "Mon", title: "1.6_Power Measurement & 1.7_Wattmeters and Energy Meters" },
+          { day: "Tue", title: "1.8_Resistance Measurement & 1.9_Compensation Techniques" },
+          { day: "Wed", title: "2.1_Measurement Inductance & 2.2_Measurement Capacitance" },
+          { day: "Thu", title: "2.3_AC Bridges - Score Capsule & 3.1_CRO Basics" },
+          { day: "Fri", title: "4.1_Digital Meters, ToD Meters & 5.1_Instrument Transformers Part-1" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: AC Systems (Test 4-8)" }
+        ]
+      },
+      {
+        week: 6,
+        title: "Batteries, Solar Cells & Wiring Accessories",
+        days: [
+          { day: "Mon", title: "5.2_Instrument Transformers Part-2 & KPSC Question Discussion" },
+          { day: "Tue", title: "7.1_Power Factor Meter, Multimeter & Servomotor" },
+          { day: "Wed", title: "1.1_Battery and Cells (Parts 1-5)" },
+          { day: "Thu", title: "1.1_Safety, First Aid & Solar Cell Classification" },
+          { day: "Fri", title: "1.1_Introduction to Design & Wiring, IE Rules & IS Code" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: L1_Measurement Class Test 1-6" }
+        ]
+      },
+      {
+        week: 7,
+        title: "Wiring Accessories & Illumination",
+        days: [
+          { day: "Mon", title: "1.5_Wiring Materials, Accessories & Domestic Installation" },
+          { day: "Tue", title: "1.10_Earthing (Part 1 & 2), 1.12_Testing, Fuses & Switches" },
+          { day: "Wed", title: "2.1_Protective Devices: Fuse, MCB, RCCB" },
+          { day: "Thu", title: "1.1_Illumination (Parts 1 & 2)" },
+          { day: "Fri", title: "1.3_Illumination Part-3 & Discussion" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: Measurement 7-8 & Cells & Safety 1-5" }
+        ]
+      },
+      {
+        week: 8,
+        title: "Industrial Wiring & DC Machines (Part 1)",
+        days: [
+          { day: "Mon", title: "1.1_Industrial Wiring - Motor Installation Wiring" },
+          { day: "Tue", title: "1.2_Space to Height Ratio & Illumination Question Revision" },
+          { day: "Wed", title: "1.3_IE Rules and IS-Codes Advanced Discussion" },
+          { day: "Thu", title: "1.1_DC Generator: Principle, Construction & Basic Terminology" },
+          { day: "Fri", title: "1.4_Armature Reaction & 1.6_Generator Characteristics" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: Safety, Solar & Wiring Tests" }
+        ]
+      },
+      {
+        week: 9,
+        title: "DC Machines (Part 2) & Transformers (Part 1)",
+        days: [
+          { day: "Mon", title: "1.7_Back EMF, Starters, Motor Characteristics & Speed Control" },
+          { day: "Tue", title: "1.10_Testing of DC Machines & 1.1_Basics of Transformers" },
+          { day: "Wed", title: "1.2_Ideal and Practical Transformer & 1.4_Losses & Efficiency" },
+          { day: "Thu", title: "1.6_Three Phase Transformer & 2.1_Transformer Core & Windings" },
+          { day: "Fri", title: "2.4_Protective Devices, Buchholz Relay & Cooling Methods" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: Wiring Tests 4-8 & DC Machines 1-2" }
+        ]
+      },
+      {
+        week: 10,
+        title: "Transformers (Part 2) & Induction Machines (Part 1)",
+        days: [
+          { day: "Mon", title: "3.1_Transformer Losses, B-H Curve & All Day Efficiency" },
+          { day: "Tue", title: "1.1_Introduction To AC Machines & Construction" },
+          { day: "Wed", title: "1.3_AC Machines EMF Equation & Factors (Part 1-3)" },
+          { day: "Thu", title: "2.1_Induction Machines Introduction & Torque Equations" },
+          { day: "Fri", title: "2.6_Power Flow Diagram & Torque in terms of Power" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: DC Machines Class Tests 3-8" }
+        ]
+      },
+      {
+        week: 11,
+        title: "AC Machines: Synchronous & Single Phase Motors",
+        days: [
+          { day: "Mon", title: "2.8_Starting Methods of Induction Motors & Special Rotors" },
+          { day: "Tue", title: "2.11_Speed Control Methods of Induction Motors" },
+          { day: "Wed", title: "3.1_Synchronous Motors: Starting, Excitation & Power Factor" },
+          { day: "Thu", title: "1.1_Single Phase Induction Motors (Part 1 & 2)" },
+          { day: "Fri", title: "1.3_Reluctance Motor, Universal Motor & Stepper Motor" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: AC Machines Class Tests 1-6" }
+        ]
+      },
+      {
+        week: 12,
+        title: "Digital Electronics (Part 1)",
+        days: [
+          { day: "Mon", title: "1.1_Number System Basics, Discussion & Binary Codes" },
+          { day: "Tue", title: "1.4_Arithmetic Operations & Signed Number Representation" },
+          { day: "Wed", title: "1.6_PYQs: Binary Codes & Arithmetic Operations" },
+          { day: "Thu", title: "1.7_Boolean Algebra & Minimization (K-Map)" },
+          { day: "Fri", title: "1.10_Logic Gates (Part 1 & 2) & Gate PYQs" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: AC Machines 7-8 & Digital Tests 1-4" }
+        ]
+      },
+      {
+        week: 13,
+        title: "Digital Electronics (Part 2) & Basic Electronics",
+        days: [
+          { day: "Mon", title: "1.13_Combinational Logic Circuits: Adder & Subtractor" },
+          { day: "Tue", title: "1.14_Sequential Circuits & 1.15_ADC & DAC Converters" },
+          { day: "Wed", title: "2.1_Soldering Techniques (Part 1 & 2)" },
+          { day: "Thu", title: "1.1_PN Junction Diode (Parts 1-4)" },
+          { day: "Fri", title: "2.1_JFET & 3.1_Rectifiers with Filters" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: Digital Class Tests 5-8 & Power Electronics 1-2" }
+        ]
+      },
+      {
+        week: 14,
+        title: "Power Electronics",
+        days: [
+          { day: "Mon", title: "1.1_Basics of Power Electronics & Practical Switches" },
+          { day: "Tue", title: "2.1_SCR (Part 1 & 2), DIAC, TRIAC, UJT & IGBT" },
+          { day: "Wed", title: "3.1_UPS, 4.1_Inverter & Battery Charger, 4.2_SMPS" },
+          { day: "Thu", title: "1.1_Power Electronics Confusing Questions" },
+          { day: "Fri", title: "1.1_Power MOSFET & 2.1_Power BJT" },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: "Weekly Practice Test: Power Electronics Class Tests 3-8" }
+        ]
+      }
+    ];
 
-        // Specific schedule mapped to 5 days of topics for Weeks 1-14
-        const customizedWeeks = [
-            ["Charge, Current, Voltage & Work, Power", "Ohms Law & Resistance", "Series/Parallel combination", "KCL & Network Analysis", "Fundamentals Question Discussion"], // W1
-            ["Equivalent Resistance", "Voltage/Current Sources", "Source Transformation", "Inductor/Capacitor Basics", "Nodal/Mesh Analysis"], // W2
-            ["BH Curve & Electro. Induction", "Self/Mutual Inductance", "Magnetic Materials", "Solenoid/Toroid & Capacitors", "Lightning Phenomenon"], // W3
-            ["Impedance, RMS, RLC circuits", "Resonance & 3-Phase", "Instruments & Torques", "PMMC & Electrodynamometer", "Power/Energy Meters"], // W4
-            ["Measurement of Resistance/Inductance", "Measurement of Capacitance & AC Bridges", "CRO Basics", "Digital Meters", "Instrument Transformers"], // W5
-            ["Batteries & Cells", "Safety & First Aid", "Solar Cell", "Wiring Design & Estimation", "IE Rules & IS Code"], // W6
-            ["Wiring Materials & Accessories", "Domestic Installation & Earthing", "Testing, Fuses, MCB, RCCB", "Illumination Basics", "Illumination Design"], // W7
-            ["Industrial Wiring", "DC Generator Principle", "DC Machines Construction", "Basic Terminology", "Armature Reaction"], // W8
-            ["Transformers Basics & Ideal/Practical", "Losses, Efficiency & 3-Phase Transformers", "Transformer Core, Windings & Insulation", "Protective Devices, Buchholz & Cooling", "B-H Curve, Eddy Current & All Day Efficiency"], // W9
-            ["AC Machines Intro & Construction", "AC Machines EMF Equation & Factors", "Induction Machines Introduction", "Torque in Induction Machines", "Power Flow Diagram & Torque Questions"], // W10
-            ["Starting Methods of Induction Motors & Rotors", "Speed Control of IM & Sync Motors Starting", "Synchronous Motors: Excitation & Power Factor", "Single Phase Motors Part-1 & 2", "Reluctance, Universal & Stepper Motors"], // W11
-            ["Number System Basics & Binary Codes", "Arithmetic Operations & Signed Numbers", "Number System PYQ & Boolean Algebra", "Boolean Algebra Minimization & K Map", "Logic Gates & PYQ"], // W12
-            ["Combinational & Sequential Logic Circuits", "ADC, DAC & Soldering Techniques", "PN Junction Diode Part-1 & 2", "PN Junction Diode Part-3 & 4", "JFET & Rectifiers with Filters"], // W13
-            ["Basics of Power Electronics & Switches", "SCR, DIAC, TRIAC & UJT", "IGBT & UPS", "Inverter, Battery Charger & SMPS", "Power MOSFET, Power BJT & Confusing Questions"] // W14
-        ];
+    // Placeholder data for weeks 15-26
+    for (let w = 15; w <= 26; w++) {
+      SYLLABUS_ROADMAP.push({
+        week: w,
+        title: `Comprehensive Power Systems & Advanced Topics (Week ${w})`,
+        days: [
+          { day: "Mon", title: `Transmission & Distribution Concepts - Day 1` },
+          { day: "Tue", title: `Protection Systems & Switchgear - Day 2` },
+          { day: "Wed", title: `Control Systems & Instrumentation - Day 3` },
+          { day: "Thu", title: `Microprocessors & Automation - Day 4` },
+          { day: "Fri", title: `Advanced PYQ Mock Analysis - Day 5` },
+          { day: "Sat", title: "Self Revision" },
+          { day: "Sun", title: `Full Length Mock Test - Week ${w}` }
+        ]
+      });
+    }
 
-        // Fallback for Weeks 15-26
-        const fallbackTopics = [
-            "Synchronous Motors: Principle, V-Curves", "Power Generation: Thermal, Hydro", "Transmission and Distribution Basics", "Fault Analysis: Symmetrical/Unsymmetrical", "Switchgear and Protection",
-            "Control Systems: Transfer Function", "Time Response Analysis", "Analog Electronics: Diodes & Rectifiers", "BJT, FET, MOSFET", "Digital Electronics: Logic Gates",
-            "Combinational Logic Circuits", "Sequential Logic Circuits", "Power Electronics: SCR", "Electric Drives and Traction", "Microprocessors: 8085 Basics"
-        ];
+    // STATE VARIABLES
+    let currentWeekNumber = 1;
+    let selectedTopic = SYLLABUS_ROADMAP[0].days[0].title;
+    let generatedQuestions = [];
+    let examTimer = null;
+    let secondsRemaining = 900; // 15 mins default
 
-        const SYLLABUS = Array.from({length: 26}, (_, wIndex) => {
-            return {
-                week: wIndex + 1,
-                days: Array.from({length: 7}, (_, dIndex) => {
-                    let topicName = "";
-                    if (dIndex < 5) {
-                        // Mon-Fri: Topics
-                        if (wIndex < customizedWeeks.length) {
-                            topicName = customizedWeeks[wIndex][dIndex];
-                        } else {
-                            topicName = fallbackTopics[(wIndex * 5 + dIndex) % fallbackTopics.length] + " (Adv.)";
-                        }
-                    } else if (dIndex === 5) {
-                        topicName = "Self Revision (All Week's Topics)";
-                    } else {
-                        topicName = `Practice Test (Week ${wIndex + 1} Comprehensive)`;
-                    }
+    // --- SAFE GEMINI API KEY LOGIC (NO HARDCODING) ---
+    function getGeminiApiKey() {
+      let key = localStorage.getItem('gemini_api_key');
+      if (!key) {
+        key = prompt("Enter your Gemini API Key to enable test generation:\n(This is safely stored only inside your browser's localStorage)");
+        if (key && key.trim()) {
+          key = key.trim();
+          localStorage.setItem('gemini_api_key', key);
+        }
+      }
+      return key;
+    }
 
-                    return {
-                        day: dIndex + 1,
-                        topic: topicName,
-                        type: dIndex < 5 ? 'topic' : (dIndex === 5 ? 'revision' : 'test')
-                    };
-                })
-            };
+    function changeApiKey() {
+      const current = localStorage.getItem('gemini_api_key') || "";
+      const newKey = prompt("Update your Gemini API Key:", current);
+      if (newKey !== null && newKey.trim()) {
+        localStorage.setItem('gemini_api_key', newKey.trim());
+        alert("API key updated successfully!");
+      }
+    }
+
+    // RENDER SYLLABUS ACCORDION
+    function renderSyllabus() {
+      const container = document.getElementById("syllabus-container");
+      container.innerHTML = "";
+
+      SYLLABUS_ROADMAP.forEach((w) => {
+        const weekCard = document.createElement("div");
+        weekCard.className = "bg-slate-900 border border-slate-800 rounded-lg overflow-hidden";
+
+        const header = document.createElement("button");
+        header.className = "w-full px-3 py-2.5 text-left flex justify-between items-center text-xs font-bold text-slate-300 hover:bg-slate-800 transition";
+        header.innerHTML = `
+          <span>W${w.week}: ${w.title.slice(0, 24)}...</span>
+          <i class="ph ph-caret-down"></i>
+        `;
+
+        const dayList = document.createElement("div");
+        dayList.className = "px-2 py-1.5 space-y-1 bg-slate-950/60 hidden border-t border-slate-800";
+
+        w.days.forEach((d) => {
+          const dayBtn = document.createElement("button");
+          dayBtn.className = "w-full text-left px-2 py-1 rounded text-[11px] text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center justify-between";
+          dayBtn.innerHTML = `
+            <span class="truncate pr-2"><strong class="text-amber-500/80 font-mono">${d.day}:</strong> ${d.title}</span>
+            <i class="ph ph-arrow-right opacity-40"></i>
+          `;
+          dayBtn.onclick = () => {
+            currentWeekNumber = w.week;
+            selectedTopic = d.title;
+            document.getElementById("active-tag").textContent = `Week ${w.week} \u2022 ${d.day}`;
+            document.getElementById("active-topic-title").textContent = d.title;
+            document.getElementById("active-subtopic-desc").textContent = `${w.title}`;
+          };
+          dayList.appendChild(dayBtn);
         });
 
-        // Curated Study Resources
-        const STUDY_RESOURCES = [
-            { title: "Asst. Engineer Syllabus Breakdown", url: "https://www.youtube.com/watch?v=XlmwyoTKiZ4", source: "Entri Technical", type: "video" },
-            { title: "Digital Electronics PYQs", url: "https://www.youtube.com/watch?v=Oxf0Fu7VSAw", source: "SCORE Academy", type: "video" },
-            { title: "Sub Engineer Mock Notes", url: "https://testbook.com/kseb-sub-engineer/notes", source: "Testbook", type: "document" },
-            { title: "EEE Made Easy Question Bank", url: "https://www.eeemadeeasy.com/sub-engineer-electrical-kseb-previous-questions-kerla-psc/", source: "EEE Made Easy", type: "document" },
-            { title: "Kerala PSC Official Question Archive", url: "https://www.keralapsc.gov.in/ml/previous-question-papers", source: "Kerala PSC", type: "document" }
-        ];
-
-        let state = {
-            user: null,
-            currentWeek: 1,
-            currentDay: 1,
-            view: 'loading',
-            pastTests: [], 
-            expandedWeeks: { 1: true }, 
-            activeQuizData: null,
-            userAnswers: [],
-            timerSeconds: 0,
-            timerInterval: null,
-            isAnalyzing: false,
-            aiAnalysis: null,
-            sidebarOpen: false
-        };
-
-        const DOM = {
-            weekList: document.getElementById('week-list'),
-            mainContent: document.getElementById('main-content'),
-            currentViewTitle: document.getElementById('current-view-title'),
-            toastContainer: document.getElementById('toast-container'),
-            timerContainer: document.getElementById('timer-container'),
-            timerDisplay: document.getElementById('timer-display'),
-            userInfo: document.getElementById('user-info-display'),
-            authDot: document.getElementById('auth-status-dot'),
-            sidebar: document.getElementById('sidebar')
-        };
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'psc-planner-app';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { projectId: "demo" };
-        let app, db, auth;
-
-        async function initializeAppEngine() {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
-                state.user = auth.currentUser;
-                DOM.userInfo.querySelector('span').innerHTML = `User ID: <span class="font-mono text-gray-700">${state.user.uid.substring(0,8)}</span>`;
-                DOM.authDot.className = 'w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]';
-                
-                await loadCloudData();
-                state.view = 'dashboard';
-                updateUI();
-                showToast("Connected to Cloud securely.", "success");
-            } catch (error) {
-                console.error("Initialization Failed:", error);
-                showToast("Database connection failed. Continuing offline.", "error");
-                DOM.authDot.className = 'w-2 h-2 rounded-full bg-red-500';
-                state.view = 'dashboard';
-                updateUI();
-            }
-        }
-
-        async function loadCloudData() {
-            if (!state.user) return;
-            try {
-                const testsCol = collection(db, 'artifacts', appId, 'users', state.user.uid, 'tests');
-                const testsSnap = await getDocs(testsCol);
-                state.pastTests = [];
-                testsSnap.forEach(doc => { state.pastTests.push({ id: doc.id, ...doc.data() }); });
-                state.pastTests.sort((a, b) => b.timestamp - a.timestamp);
-            } catch (e) {
-                console.error("Error loading cloud data:", e);
-            }
-        }
-
-        async function saveTestResultToCloud(testData) {
-            if (!state.user) return;
-            const testsCol = collection(db, 'artifacts', appId, 'users', state.user.uid, 'tests');
-            try {
-                const docRef = await addDoc(testsCol, testData);
-                state.pastTests.unshift({ id: docRef.id, ...testData });
-            } catch (e) {
-                console.error("Failed to save test result:", e);
-                showToast("Failed to save test to cloud.", "error");
-            }
-        }
-
-        function updateUI() {
-            renderSidebar();
-            renderMainContent();
-        }
-
-        window.toggleWeek = (weekNum) => {
-            state.expandedWeeks[weekNum] = !state.expandedWeeks[weekNum];
-            renderSidebar();
-        }
-
-        window.selectDay = (weekNum, dayNum) => {
-            if (state.view === 'quiz' && !confirm("Leave active test? Progress will be lost.")) return;
-            state.currentWeek = weekNum;
-            state.currentDay = dayNum;
-            state.view = 'dashboard';
-            if(window.innerWidth < 768) toggleSidebar();
-            updateUI();
-        }
-
-        function renderSidebar() {
-            DOM.weekList.innerHTML = '';
-            
-            SYLLABUS.forEach(weekData => {
-                const isOpen = !!state.expandedWeeks[weekData.week];
-                
-                const weekBtn = document.createElement('button');
-                weekBtn.className = `w-full text-left p-3 rounded-lg font-bold text-sm flex items-center justify-between transition-colors ${isOpen ? 'bg-primary-50 text-primary-800' : 'bg-white text-gray-700 hover:bg-gray-50'}`;
-                weekBtn.innerHTML = `<span>Week ${weekData.week}</span> <i class="ph ph-caret-${isOpen ? 'up' : 'down'} text-gray-400"></i>`;
-                weekBtn.onclick = () => toggleWeek(weekData.week);
-                
-                const daysContainer = document.createElement('div');
-                daysContainer.className = `accordion-content pl-2 space-y-1 mt-1 ${isOpen ? 'open' : ''}`;
-                
-                weekData.days.forEach(dayData => {
-                    const isSelected = state.currentWeek === weekData.week && state.currentDay === dayData.day;
-                    const dayTests = state.pastTests.filter(t => t.week === weekData.week && t.day === dayData.day);
-                    const hasCompleted = dayTests.length > 0;
-                    const bestScore = hasCompleted ? Math.max(...dayTests.map(t => t.score)) : null;
-
-                    let iconClass = "ph-circle";
-                    let iconColor = "text-gray-300";
-                    if (dayData.type === 'revision') iconClass = "ph-book-open";
-                    if (dayData.type === 'test') iconClass = "ph-star";
-                    if (hasCompleted) { iconClass = "ph-check-circle-fill"; iconColor = "text-primary-500"; }
-
-                    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-                    const dName = dayNames[dayData.day - 1];
-
-                    const dayBtn = document.createElement('button');
-                    dayBtn.className = `w-full text-left p-2.5 rounded-lg text-xs transition-all flex items-start gap-2 group ${isSelected ? 'bg-slate-800 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`;
-                    
-                    dayBtn.innerHTML = `
-                        <div class="mt-0.5 w-4 flex justify-center"><i class="ph ${iconClass} ${iconColor} ${!isSelected && !hasCompleted ? 'group-hover:text-gray-500' : ''} text-base"></i></div>
-                        <div class="flex-1 overflow-hidden">
-                            <div class="font-bold mb-0.5">${dName} (Day ${dayData.day})</div>
-                            <div class="line-clamp-2 opacity-80" title="${dayData.topic}">${dayData.topic}</div>
-                        </div>
-                        ${hasCompleted ? `<div class="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded ml-1">${bestScore}</div>` : ''}
-                    `;
-                    dayBtn.onclick = () => selectDay(weekData.week, dayData.day);
-                    daysContainer.appendChild(dayBtn);
-                });
-
-                DOM.weekList.appendChild(weekBtn);
-                DOM.weekList.appendChild(daysContainer);
-            });
-        }
-
-        function renderMainContent() {
-            const currentDayObj = SYLLABUS[state.currentWeek - 1].days[state.currentDay - 1];
-            const topic = currentDayObj.topic;
-            // 15 base questions, +1 for each week progressed
-            const qCount = 15 + state.currentWeek; 
-            
-            if (state.view === 'quiz') DOM.timerContainer.classList.remove('hidden');
-            else { DOM.timerContainer.classList.add('hidden'); stopTimer(); }
-
-            if (state.view === 'dashboard') {
-                DOM.currentViewTitle.innerHTML = `<span class="text-gray-400 font-normal">Week ${state.currentWeek} / Day ${state.currentDay}</span> Dashboard`;
-                
-                const dayTests = state.pastTests.filter(t => t.week === state.currentWeek && t.day === state.currentDay);
-                let historyHtml = '';
-                
-                if (dayTests.length > 0) {
-                    historyHtml = `<div class="mt-8"><h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Past Attempts (${dayTests.length})</h3><div class="space-y-3">`;
-                    dayTests.forEach(t => {
-                        const pct = Math.round((t.score / t.total) * 100);
-                        const color = pct >= 60 ? 'text-primary-600' : 'text-orange-500';
-                        historyHtml += `
-                            <div class="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:shadow-md cursor-pointer transition-shadow" onclick="openHistoricalResult('${t.id}')">
-                                <div>
-                                    <div class="text-xs text-gray-500 mb-1">${new Date(t.timestamp).toLocaleString()}</div>
-                                    <div class="font-bold text-sm text-gray-800">Score: ${t.score} / ${t.total}</div>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <div class="font-extrabold ${color} text-lg">${pct}%</div>
-                                    <i class="ph ph-caret-right text-gray-300"></i>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    historyHtml += `</div></div>`;
-                }
-
-                let resourcesHtml = `<div class="mt-8"><h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Recommended Study Materials</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
-                STUDY_RESOURCES.forEach(res => {
-                    const icon = res.type === 'video' ? 'ph-youtube-logo text-red-500' : 'ph-file-pdf text-blue-500';
-                    resourcesHtml += `
-                        <a href="${res.url}" target="_blank" rel="noopener noreferrer" class="bg-white p-4 rounded-xl border border-gray-200 hover:shadow-md hover:border-primary-300 transition-all flex items-start gap-3 group">
-                            <i class="ph ${icon} text-2xl mt-1"></i>
-                            <div>
-                                <h4 class="font-semibold text-gray-800 text-sm group-hover:text-primary-600 transition-colors line-clamp-1">${res.title}</h4>
-                                <p class="text-xs text-gray-500 mt-1">Source: ${res.source}</p>
-                            </div>
-                        </a>
-                    `;
-                });
-                resourcesHtml += `</div></div>`;
-
-                DOM.mainContent.innerHTML = `
-                    <div class="max-w-4xl mx-auto fade-in h-full flex flex-col pb-10">
-                        <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 shadow-xl relative overflow-hidden flex-shrink-0 text-white">
-                            <div class="absolute top-0 right-0 p-8 opacity-10">
-                                <i class="ph ph-cpu text-9xl"></i>
-                            </div>
-                            <div class="relative z-10">
-                                <div class="inline-block px-3 py-1 bg-primary-500/20 text-primary-300 border border-primary-500/30 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                                    ${currentDayObj.type === 'revision' ? 'Self Revision Day' : (currentDayObj.type === 'test' ? 'Weekly Practice Test' : 'PSC AE / Sub Engineer Topic')}
-                                </div>
-                                <h2 class="text-2xl md:text-3xl font-bold mb-2 leading-tight">${topic}</h2>
-                                <p class="text-slate-400 text-sm mb-8 max-w-xl">Take unlimited tests to master this topic. The AI generates ${qCount} fresh, highly relevant questions matching the difficulty of Kerala PSC exams.</p>
-                                
-                                <button onclick="generateTest()" class="px-8 py-4 bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)] transition-all active:scale-95 flex items-center gap-3 group">
-                                    <i class="ph ph-lightning text-xl group-hover:animate-pulse"></i> Generate & Start Timed Test
-                                </button>
-                            </div>
-                        </div>
-                        ${historyHtml}
-                        ${resourcesHtml}
-                    </div>
-                `;
-            } 
-            else if (state.view === 'generating') {
-                DOM.currentViewTitle.innerText = "Building Test Engine";
-                DOM.mainContent.innerHTML = `
-                    <div class="h-full flex flex-col items-center justify-center fade-in text-center p-6">
-                        <div class="loader mb-6 border-primary-500"></div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">Compiling PSC/AE Level Questions...</h3>
-                        <p class="text-gray-500 max-w-md text-sm">Our AI is fetching previous year patterns and generating ${qCount} questions for <strong>"${topic}"</strong>.</p>
-                    </div>
-                `;
-            }
-            else if (state.view === 'quiz') renderQuizView();
-            else if (state.view === 'results') renderResultsView(true);
-        }
-
-        window.generateTest = async function() {
-            const currentDayObj = SYLLABUS[state.currentWeek - 1].days[state.currentDay - 1];
-            let topic = currentDayObj.topic;
-            
-            // If it's the weekly test, combine all topics for the week
-            if (currentDayObj.type === 'test') {
-                const weekTopics = SYLLABUS[state.currentWeek - 1].days.slice(0, 5).map(d => d.topic).join(", ");
-                topic = `Comprehensive test covering: ${weekTopics}`;
-            }
-            
-            const qCount = 15 + state.currentWeek;
-            
-            state.view = 'generating';
-            updateUI();
-
-            const prompt = `You are an expert examiner for Engineering competitive exams in India. Generate a ${qCount}-question multiple-choice test on the specific topic: "${topic}". 
-            REQUIREMENT: The questions must strictly match the difficulty, format, terminology, and style of "Kerala PSC AE (Assistant Engineer), Sub Engineer, and Workshop Inspector" electrical/electronics examinations. 
-            Ensure numerical problems and theoretical concepts are balanced. Provide clear, detailed explanations for the answers.`;
-            
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                question: { type: "STRING" },
-                                options: { type: "ARRAY", items: { type: "STRING", description: "Exactly 4 options" } },
-                                correctAnswerIndex: { type: "INTEGER", description: "Index of correct option (0 to 3)" },
-                                explanation: { type: "STRING" }
-                            },
-                            required: ["question", "options", "correctAnswerIndex", "explanation"]
-                        }
-                    }
-                }
-            };
-
-            // THE SAFE WAY
-let GEMINI_API_KEY = localStorage.getItem('user_gemini_key');
-
-if (!GEMINI_API_KEY) {
-    GEMINI_API_KEY = prompt("Please enter a Gemini API Key to enable Quiz Generation:");
-    if (GEMINI_API_KEY) {
-        localStorage.setItem('user_gemini_key', GEMINI_API_KEY);
-    } else {
-        alert("Quiz generation will not work without an API key.");
+        header.onclick = () => dayList.classList.toggle("hidden");
+        weekCard.appendChild(header);
+        weekCard.appendChild(dayList);
+        container.appendChild(weekCard);
+      });
     }
-}
 
-// Optional: Add a function to let users reset their key if they make a mistake
-function resetApiKey() {
-    localStorage.removeItem('user_gemini_key');
-    location.reload();
-}
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    // --- GEMINI AI QUIZ GENERATION ---
+    async function startTestGeneration() {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        alert("A Gemini API Key is required to generate practice tests.");
+        return;
+      }
 
-            try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const result = await response.json();
-                
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
-                    const parsedData = JSON.parse(result.candidates[0].content.parts[0].text);
-                    state.activeQuizData = parsedData;
-                    state.userAnswers = new Array(parsedData.length).fill(null);
-                    state.view = 'quiz';
-                    
-                    const timePerQuestion = 60; // 60 seconds per question
-                    startTimer(qCount * timePerQuestion); 
-                    
-                    updateUI();
-                } else throw new Error("Invalid AI Response format.");
-            } catch (error) {
-                console.error("Test generation failed:", error);
-                showToast("Failed to generate test. Please try again.", "error");
-                state.view = 'dashboard';
-                updateUI();
-            }
+      const startBtn = document.getElementById("start-test-btn");
+      startBtn.disabled = true;
+      startBtn.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-xl"></i> Generating Test...`;
+
+      // Question count scales with progress: starts at 15 and adds 1 per week
+      const questionCount = 15 + Math.min(currentWeekNumber, 15);
+      secondsRemaining = questionCount * 60; // 1 minute per question
+
+      const promptText = `Generate a competitive examination practice test for Kerala PSC Assistant Engineer (AE), Sub Engineer, and Workshop Inspector in Electrical and Electronics Engineering.
+Topic: "${selectedTopic}" (Week ${currentWeekNumber} syllabus).
+Required Questions: exactly ${questionCount} multiple-choice questions.
+
+Output ONLY a raw, valid JSON array of objects with no Markdown backticks, no notes, and no prefix. Structure:
+[
+  {
+    "q": "The question text",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "ans": 0,
+    "explanation": "Brief step-by-step reasoning or formula"
+  }
+]`;
+
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
+
+        if (!response.ok) {
+          if (response.status === 400 || response.status === 403) {
+            localStorage.removeItem('gemini_api_key');
+            alert("API key invalid or expired. Key was reset. Please try again.");
+          }
+          throw new Error(`API error code: ${response.status}`);
         }
 
-        function startTimer(duration) {
-            state.timerSeconds = duration;
-            updateTimerDisplay();
-            clearInterval(state.timerInterval);
-            
-            state.timerInterval = setInterval(() => {
-                state.timerSeconds--;
-                updateTimerDisplay();
-                if (state.timerSeconds <= 0) {
-                    stopTimer();
-                    showToast("Time's up! Auto-submitting...", "warning");
-                    submitQuiz(true);
-                }
-            }, 1000);
+        const data = await response.json();
+        let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        generatedQuestions = JSON.parse(rawText);
+
+        renderTestUI();
+      } catch (err) {
+        console.error("Test generation error:", err);
+        alert("Failed to generate test. Please verify your internet and API key.");
+      } finally {
+        startBtn.disabled = false;
+        startBtn.innerHTML = `<i class="ph ph-play-circle text-xl"></i> Launch Practice Test`;
+      }
+    }
+
+    // RENDER TEST UI & START TIMER
+    function renderTestUI() {
+      document.getElementById("test-view").classList.remove("hidden");
+      document.getElementById("result-view").classList.add("hidden");
+      document.getElementById("test-view-title").textContent = `${selectedTopic} (${generatedQuestions.length} Questions)`;
+
+      const container = document.getElementById("questions-list");
+      container.innerHTML = "";
+
+      generatedQuestions.forEach((item, index) => {
+        const qCard = document.createElement("div");
+        qCard.className = "bg-slate-950 p-5 rounded-lg border border-slate-800 space-y-3";
+        qCard.innerHTML = `
+          <p class="font-semibold text-slate-100 text-sm"><span class="text-amber-400 font-mono mr-2">Q${index + 1}.</span>${item.q}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+            ${item.options.map((opt, oIdx) => `
+              <label class="flex items-center gap-2.5 p-3 rounded-lg border border-slate-800 bg-slate-900/40 hover:bg-slate-900 cursor-pointer text-xs text-slate-300 transition">
+                <input type="radio" name="question_${index}" value="${oIdx}" class="text-amber-500 focus:ring-0">
+                <span>${opt}</span>
+              </label>
+            `).join("")}
+          </div>
+        `;
+        container.appendChild(qCard);
+      });
+
+      // Scroll to test
+      document.getElementById("test-view").scrollIntoView({ behavior: "smooth" });
+
+      // Start Countdown
+      clearInterval(examTimer);
+      examTimer = setInterval(() => {
+        secondsRemaining--;
+        const mins = Math.floor(secondsRemaining / 60);
+        const secs = secondsRemaining % 60;
+        document.getElementById("timer-display").textContent = 
+          `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (secondsRemaining <= 0) {
+          clearInterval(examTimer);
+          alert("Time is up! Auto-submitting your test.");
+          submitExam(true);
         }
+      }, 1000);
+    }
 
-        function stopTimer() {
-            clearInterval(state.timerInterval);
-            state.timerInterval = null;
-            DOM.timerDisplay.classList.remove('pulse-red');
+    // SUBMIT EXAM & CALCULATE SCORES
+    async function submitExam(forced = false) {
+      clearInterval(examTimer);
+
+      let correctCount = 0;
+      const missedQuestions = [];
+
+      generatedQuestions.forEach((item, index) => {
+        const checked = document.querySelector(`input[name="question_${index}"]:checked`);
+        const userChoice = checked ? parseInt(checked.value) : -1;
+
+        if (userChoice === item.ans) {
+          correctCount++;
+        } else {
+          missedQuestions.push({
+            question: item.q,
+            selected: userChoice >= 0 ? item.options[userChoice] : "Skipped",
+            correct: item.options[item.ans],
+            explanation: item.explanation
+          });
         }
+      });
 
-        function updateTimerDisplay() {
-            const m = Math.floor(state.timerSeconds / 60);
-            const s = state.timerSeconds % 60;
-            DOM.timerDisplay.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            if (state.timerSeconds <= 60 && state.timerSeconds > 0) DOM.timerDisplay.classList.add('pulse-red');
-            else DOM.timerDisplay.classList.remove('pulse-red');
+      const total = generatedQuestions.length;
+      const percentage = Math.round((correctCount / total) * 100);
+
+      // Show Results View
+      document.getElementById("test-view").classList.add("hidden");
+      document.getElementById("result-view").classList.remove("hidden");
+      document.getElementById("score-badge").textContent = `${percentage}%`;
+      document.getElementById("score-summary-text").textContent = `You scored ${correctCount} out of ${total} correctly on ${selectedTopic}.`;
+
+      // Save to Firebase & LocalStorage
+      saveAttemptRecord(selectedTopic, correctCount, total, percentage);
+
+      // Trigger AI Diagnostic
+      generateAiPerformanceReview(missedQuestions, correctCount, total);
+    }
+
+    // GENERATE AI PERFORMANCE REVIEW
+    async function generateAiPerformanceReview(missed, score, total) {
+      const feedbackElem = document.getElementById("ai-feedback-container");
+      feedbackElem.innerHTML = `<div class="flex items-center gap-2 text-slate-400"><i class="ph ph-spinner-gap animate-spin"></i> Generating diagnostic review...</div>`;
+
+      if (missed.length === 0) {
+        feedbackElem.innerHTML = `<p class="text-green-400 font-semibold">Perfect score! You demonstrated solid mastery of ${selectedTopic}. Proceed to the next scheduled day!</p>`;
+        return;
+      }
+
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) return;
+
+      const prompt = `A candidate preparing for Kerala PSC Assistant Engineer & Sub Engineer scored ${score}/${total} on "${selectedTopic}".
+Here are the questions they missed:
+${JSON.stringify(missed.slice(0, 5))}
+
+Provide a concise, 3-point diagnostic feedback:
+1. Core theoretical misconception identified.
+2. Standard formulas or definitions needing immediate revision.
+3. Quick action step for tomorrow's study. Keep it encouraging, succinct, and bulleted.`;
+
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const d = await res.json();
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || "Review the recommended textbooks and formulas for this topic.";
+        feedbackElem.innerHTML = `<div class="whitespace-pre-line">${text}</div>`;
+      } catch (e) {
+        feedbackElem.innerHTML = `<p class="text-slate-400">Review the basic formulas and previous year questions related to this unit.</p>`;
+      }
+    }
+
+    // PERSISTENCE: FIRESTORE & LOCALSTORAGE
+    async function saveAttemptRecord(topic, score, total, pct) {
+      const record = {
+        topic: topic,
+        score: score,
+        total: total,
+        percentage: pct,
+        date: new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      };
+
+      // 1. LocalStorage Backup
+      const local = JSON.parse(localStorage.getItem("study_attempts") || "[]");
+      local.unshift(record);
+      localStorage.setItem("study_attempts", JSON.stringify(local.slice(0, 20)));
+
+      // 2. Cloud Firestore Save
+      if (window.firebaseDb && window.currentUserId) {
+        try {
+          await window.firebaseAddDoc(window.firebaseCollection(window.firebaseDb, `users/${window.currentUserId}/attempts`), {
+            ...record,
+            timestamp: window.firebaseTimestamp()
+          });
+        } catch (e) {
+          console.warn("Could not save to Firestore, local storage used instead.", e);
         }
+      }
 
-        function renderQuizView() {
-            DOM.currentViewTitle.innerHTML = `<span class="text-primary-600">Active Test</span> | ${SYLLABUS[state.currentWeek-1].days[state.currentDay-1].topic}`;
-            
-            let html = `<div class="max-w-4xl mx-auto fade-in pb-28">`;
-            state.activeQuizData.forEach((q, qIndex) => {
-                html += `
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 hover:border-gray-300 transition-colors">
-                        <h4 class="font-semibold text-gray-900 mb-5 text-lg leading-relaxed"><span class="inline-block bg-slate-100 text-slate-600 rounded-md px-2 py-1 mr-2 text-sm border border-slate-200 shadow-sm">Q${qIndex + 1}</span> ${q.question}</h4>
-                        <div class="space-y-3 pl-2 md:pl-11">
-                `;
-                q.options.forEach((opt, optIndex) => {
-                    const isSelected = state.userAnswers[qIndex] === optIndex;
-                    html += `
-                        <label class="flex items-start gap-4 p-4 border rounded-xl cursor-pointer transition-all ${isSelected ? 'border-primary-500 bg-primary-50/50 shadow-sm ring-1 ring-primary-500' : 'border-gray-200 hover:bg-gray-50'}">
-                            <input type="radio" name="q${qIndex}" class="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500" ${isSelected ? 'checked' : ''} onclick="selectAnswer(${qIndex}, ${optIndex})">
-                            <span class="text-gray-700 font-medium leading-snug">${opt}</span>
-                        </label>
-                    `;
-                });
-                html += `</div></div>`;
-            });
+      loadSavedHistory();
+    }
 
-            const answeredCount = state.userAnswers.filter(a => a !== null).length;
-            const total = state.activeQuizData.length;
+    function loadSavedHistory() {
+      const container = document.getElementById("history-container");
+      const local = JSON.parse(localStorage.getItem("study_attempts") || "[]");
+      document.getElementById("attempt-count").textContent = `${local.length} recorded`;
 
-            html += `
-                <div class="fixed bottom-0 left-0 md:left-80 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-20 flex justify-between items-center px-6">
-                    <div class="flex items-center gap-4">
-                        <button onclick="cancelQuiz()" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Cancel Test"><i class="ph ph-x-circle text-2xl"></i></button>
-                        <div class="hidden sm:block text-sm font-semibold text-gray-500">Attempted: <span class="text-gray-900">${answeredCount} / ${total}</span></div>
-                    </div>
-                    <button onclick="submitQuiz()" class="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm transition-all active:scale-95">
-                        Finish & Analyze <i class="ph ph-check-circle"></i>
-                    </button>
-                </div>
-            </div>`;
-            DOM.mainContent.innerHTML = html;
-        }
+      if (local.length === 0) {
+        container.innerHTML = "No test records found yet. Complete a test above to record your score!";
+        return;
+      }
 
-        window.selectAnswer = (qIndex, optIndex) => { state.userAnswers[qIndex] = optIndex; renderQuizView(); }
-        window.cancelQuiz = () => {
-            if(confirm("Exit and lose all answers?")) {
-                stopTimer(); state.view = 'dashboard'; updateUI();
-            }
-        }
+      container.innerHTML = local.slice(0, 5).map(item => `
+        <div class="flex items-center justify-between p-3 rounded-lg border border-slate-800 bg-slate-950">
+          <div>
+            <div class="font-medium text-slate-200">${item.topic}</div>
+            <div class="text-xs text-slate-500">${item.date}</div>
+          </div>
+          <div class="text-right">
+            <span class="font-mono font-bold ${item.percentage >= 70 ? 'text-green-400' : 'text-amber-400'}">${item.percentage}%</span>
+            <div class="text-[11px] text-slate-500">${item.score}/${item.total} correct</div>
+          </div>
+        </div>
+      `).join("");
+    }
 
-        window.submitQuiz = async (autoSubmit = false) => {
-            if (!autoSubmit && state.userAnswers.includes(null)) {
-                if(!confirm(`You left some questions blank. Submit anyway?`)) return;
-            }
-            stopTimer();
-            state.view = 'results';
-            state.isAnalyzing = true;
-            state.aiAnalysis = null;
-            updateUI(); 
-
-            let score = 0;
-            state.activeQuizData.forEach((q, i) => { if (state.userAnswers[i] === q.correctAnswerIndex) score++; });
-            const total = state.activeQuizData.length;
-            const topic = SYLLABUS[state.currentWeek-1].days[state.currentDay-1].topic;
-
-            let performanceData = state.activeQuizData.map((q, i) => {
-                const userAns = state.userAnswers[i];
-                if(userAns === q.correctAnswerIndex) return null; 
-                return `Q: ${q.question}\nCorrect: ${q.options[q.correctAnswerIndex]}\nUser: ${userAns !== null ? q.options[userAns] : "Skipped"}`;
-            }).filter(Boolean).join('\n\n');
-
-            const prompt = `Analyze a student's performance for a PSC Assistant Engineer exam on "${topic}". Score: ${score}/${total}. 
-            Mistakes made: ${performanceData || 'None. Perfect score!'}. 
-            Write a concise 2-paragraph specific feedback report. Para 1: Overall exam readiness for this topic. Para 2: Specific formulas/concepts to revise based on their mistakes. Format with simple HTML (<p>, <b>).`;
-
-            try {
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                const result = await response.json();
-                state.aiAnalysis = result.candidates[0].content.parts[0].text.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '').trim();
-            } catch(e) {
-                console.error("AI Analysis failed:", e);
-                state.aiAnalysis = "<p>AI Analysis unavailable at the moment.</p>";
-            }
-            
-            state.isAnalyzing = false;
-            
-            const testRecord = {
-                week: state.currentWeek,
-                day: state.currentDay,
-                topic: topic,
-                timestamp: Date.now(),
-                score: score,
-                total: total,
-                quizData: state.activeQuizData,
-                userAnswers: state.userAnswers,
-                aiAnalysis: state.aiAnalysis
-            };
-            await saveTestResultToCloud(testRecord);
-            updateUI();
-            if(!autoSubmit) showToast(`Test saved successfully!`, "success");
-        }
-
-        window.openHistoricalResult = function(id) {
-            const record = state.pastTests.find(t => t.id === id);
-            if(record) renderResultsView(false, record);
-        }
-
-        function renderResultsView(isActiveTest, historyRecord = null) {
-            const data = isActiveTest ? {
-                score: state.activeQuizData.filter((q,i) => state.userAnswers[i] === q.correctAnswerIndex).length,
-                total: state.activeQuizData.length,
-                quizData: state.activeQuizData,
-                userAnswers: state.userAnswers,
-                aiAnalysis: state.aiAnalysis,
-                isAnalyzing: state.isAnalyzing
-            } : historyRecord;
-
-            const percentage = Math.round((data.score / data.total) * 100);
-            DOM.currentViewTitle.innerText = isActiveTest ? "Post-Test Analysis" : `Past Result: ${new Date(historyRecord.timestamp).toLocaleString()}`;
-
-            let html = `
-                <div class="max-w-4xl mx-auto fade-in pb-12">
-                    <div class="flex flex-col md:flex-row gap-6 mb-8">
-                        <div class="bg-white rounded-3xl shadow-sm border border-gray-200 p-8 text-center flex-1 flex flex-col justify-center items-center">
-                            <h2 class="text-5xl font-extrabold text-slate-800 mb-2">${data.score} <span class="text-2xl text-gray-400">/ ${data.total}</span></h2>
-                            <div class="text-lg font-bold ${percentage >= 60 ? 'text-primary-600' : 'text-orange-600'} mb-6">${percentage}% Overall Score</div>
-                            <button onclick="state.view = 'dashboard'; updateUI();" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors border border-slate-300 shadow-sm"><i class="ph ph-arrow-left"></i> Back to Planner</button>
-                        </div>
-                        
-                        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl border border-indigo-100 p-8 flex-[2] shadow-sm relative overflow-hidden">
-                            <i class="ph ph-sparkle text-8xl absolute -bottom-4 -right-4 text-indigo-500/10"></i>
-                            <h3 class="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2"><i class="ph ph-magic-wand"></i> Expert AI Feedback</h3>
-                            ${data.isAnalyzing ? `
-                                <div class="animate-pulse space-y-3">
-                                    <div class="h-3 bg-indigo-200/50 rounded w-3/4"></div>
-                                    <div class="h-3 bg-indigo-200/50 rounded w-full"></div>
-                                    <div class="h-3 bg-indigo-200/50 rounded w-5/6"></div>
-                                    <div class="text-sm text-indigo-600 font-semibold mt-4 flex items-center gap-2"><div class="loader !w-4 !h-4 !border-2 !border-t-indigo-600"></div> Generating PSC focused feedback...</div>
-                                </div>
-                            ` : `<div class="prose prose-sm text-indigo-900 leading-relaxed max-w-none">${data.aiAnalysis}</div>`}
-                        </div>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Detailed Solution Review</h3>
-            `;
-
-            data.quizData.forEach((q, qIndex) => {
-                const userAns = data.userAnswers[qIndex];
-                const isCorrect = userAns === q.correctAnswerIndex;
-                const isUnanswered = userAns === null;
-                let borderColor = isCorrect ? 'border-primary-300' : (isUnanswered ? 'border-gray-300' : 'border-red-300');
-
-                html += `
-                    <div class="bg-white rounded-2xl shadow-sm border ${borderColor} p-6 mb-5 overflow-hidden relative">
-                        ${isCorrect ? `<div class="absolute top-0 right-0 bg-primary-100 text-primary-700 text-xs font-bold px-3 py-1 rounded-bl-lg">Correct</div>` : (isUnanswered ? `<div class="absolute top-0 right-0 bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-bl-lg">Skipped</div>` : `<div class="absolute top-0 right-0 bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-bl-lg">Incorrect</div>`)}
-                        <h4 class="font-bold text-slate-800 text-base mb-5 mt-2">Q${qIndex + 1}. ${q.question}</h4>
-                        <div class="space-y-2.5">
-                `;
-                
-                q.options.forEach((opt, optIndex) => {
-                    let optClass = "text-gray-500 border-gray-100 bg-gray-50/50";
-                    let icon = "";
-                    if (optIndex === q.correctAnswerIndex) {
-                        optClass = "text-primary-800 font-bold bg-primary-50 border-primary-200 ring-1 ring-primary-500/30";
-                        icon = `<i class="ph ph-check-circle-fill text-primary-600 ml-auto text-lg"></i>`;
-                    } else if (optIndex === userAns && !isCorrect) {
-                        optClass = "text-red-800 font-bold bg-red-50 border-red-200 ring-1 ring-red-500/30";
-                        icon = `<i class="ph ph-x-circle-fill text-red-600 ml-auto text-lg"></i>`;
-                    }
-                    html += `<div class="flex items-center p-3 rounded-xl border text-sm ${optClass}"><span class="mr-3 font-bold w-5 opacity-70">${String.fromCharCode(65 + optIndex)}.</span> ${opt} ${icon}</div>`;
-                });
-                
-                html += `</div>
-                        <div class="mt-5 bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm">
-                            <strong class="text-slate-800 flex items-center gap-2 mb-1.5"><i class="ph ph-lightbulb-filament text-amber-500"></i> Explanation:</strong> 
-                            <span class="text-slate-600">${q.explanation}</span>
-                        </div>
-                    </div>`;
-            });
-            html += `</div>`;
-            DOM.mainContent.innerHTML = html;
-        }
-
-        window.toggleSidebar = () => {
-            state.sidebarOpen = !state.sidebarOpen;
-            DOM.sidebar.classList.toggle('hidden', !state.sidebarOpen);
-            DOM.sidebar.classList.toggle('absolute', state.sidebarOpen);
-            DOM.sidebar.classList.toggle('h-full', state.sidebarOpen);
-            DOM.sidebar.classList.toggle('z-50', state.sidebarOpen);
-        }
-
-        function showToast(msg, type="info") {
-            const toast = document.createElement('div');
-            const bg = type === 'error' ? 'bg-red-600' : (type === 'success' ? 'bg-emerald-600' : 'bg-slate-800');
-            toast.className = `${bg} text-white px-5 py-3 rounded-lg shadow-xl text-sm font-bold fade-in flex items-center gap-2 pointer-events-auto`;
-            toast.innerHTML = `<i class="ph ph-info text-lg"></i> ${msg}`;
-            DOM.toastContainer.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0'; toast.style.transform = 'translateY(10px)'; toast.style.transition = 'all 0.3s ease-out';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        window.onload = initializeAppEngine;
-    </script>
+    // INITIALIZATION
+    window.addEventListener("DOMContentLoaded", () => {
+      renderSyllabus();
+      loadSavedHistory();
+    });
+  </script>
 </body>
 </html>
