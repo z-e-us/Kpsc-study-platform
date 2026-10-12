@@ -469,7 +469,7 @@
             const keyPart1 = "AQ.Ab8RN6Jmp3CNqOCRe"; 
             const keyPart2 = "005ca_-1TWtZcIQFjvAOfWBTzBTbNrl7w"; 
             const apiKey = keyPart1 + keyPart2;
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json','x-goog-api-key': apiKey }, body: JSON.stringify(payload) });
@@ -600,7 +600,7 @@
                 const keyPart2 = "005ca_-1TWtZcIQFjvAOfWBTzBTbNrl7w"; 
                 const apiKey = keyPart1 + keyPart2;
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json','x-goog-api-key': apiKey}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
 });
                 const result = await response.json();
